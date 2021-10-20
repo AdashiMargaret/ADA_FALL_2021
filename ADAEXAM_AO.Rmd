@@ -1,0 +1,32 @@
+---
+title: "ADA_Exam1"
+output: html_document
+---
+
+```{r}
+library(foreign)
+library(haven)
+library(readr)
+library(knitr)
+library(psych)
+library(tidyverse)
+library(ggplot2)
+```
+
+#To import dataset
+
+BRFSS2017 <- read_csv("https://raw.githubusercontent.com/kijohnson/ADA-Fall-2021/master/BRFSS2017_10percent_v.csv")
+
+#To calculate the height median for male and females where 1 = "male" and 2 = "female" while removing other sex values
+```{r}
+
+brfss2017n  <- BRFSS2017%>% 
+  filter(BRFSS2017$SEX < 3)
+aggregate(brfss2017n$ht_meters, list(brfss2017n$SEX), median, na.rm=TRUE)
+```
+
+# To get the box plot showing the median height differences for male (1) and female (2)
+
+```{r}
+boxplot(brfss2017n$ht_meters ~ brfss2017n$SEX, na.rm=TRUE)
+```
