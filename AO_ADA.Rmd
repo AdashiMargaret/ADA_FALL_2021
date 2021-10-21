@@ -1,0 +1,42 @@
+---
+title: "ADA_Exam1"
+output: html_document
+---
+
+```{r}
+library(foreign)
+library(haven)
+library(readr)
+library(knitr)
+library(psych)
+library(tidyverse)
+library(ggplot2)
+```
+
+#To import dataset
+
+BRFSS2017 <- read_csv("https://raw.githubusercontent.com/kijohnson/ADA-Fall-2021/master/BRFSS2017_10percent_v.csv")
+
+#To remove other sex values and rename code 1 and 2 as male and female:
+```{r}
+
+brfss2017n  <- BRFSS2017%>% 
+  filter(BRFSS2017$SEX < 3) %>%  
+mutate(brfss2017n, SEXrecode = recode_factor(.x = brfss2017n$SEX, `1` = "male", `2` = "female"))
+```
+
+#To get the median height of male and female
+```{r}
+aggregate(brfss2017n$ht_meters, list(brfss2017n$SEXrecode), median, na.rm=TRUE)
+
+```
+
+# To get the box plot showing the median height differences between male and female
+
+```{r}
+boxplot(brfss2017n$ht_meters ~ brfss2017n$SEXrecode, na.rm=TRUE )
+```
+
+
+```
+
