@@ -30,3 +30,9 @@ aggregate(brfss2017n$ht_meters, list(brfss2017n$SEX), median, na.rm=TRUE)
 ```{r}
 boxplot(brfss2017n$ht_meters ~ brfss2017n$SEX, na.rm=TRUE)
 ```
+
+#To calculate the mean height for male and females where 1 = "male" and 2 = "female"
+```{r}
+aggregate(brfss2017n$ht_meters, list(brfss2017n$SEX), mean, na.rm=TRUE)
+```
+
