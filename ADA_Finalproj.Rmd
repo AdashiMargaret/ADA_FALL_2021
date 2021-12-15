@@ -1,0 +1,172 @@
+---
+title: "ADA_finalproject"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+install.packages(pacman)
+install.packages("table1")
+pacman::p_load(tidyverse, ROCR, odds.n.ends, blorr, lmtest, car)
+library(table1)
+library(foreign)
+library(haven)
+library(readr)
+library(knitr)
+library(psych)
+library(tidyverse)
+library(ggplot2)
+library(plyr)
+library(dplyr)
+library(naniar)
+```
+
+
+#To open dataset
+```{r}
+CHIS_spss <-
+  read.spss(
+    "C:\\Users\\adash\\OneDrive\\Documents\\ADA_finalproj_dataset.sav", to.data.frame=TRUE
+    )
+```
+
+#Rename variable names 
+```{r}
+names(CHIS_spss)[1:6]<-c("asthma", "smoking", "race", "bmi", "age", "sex")
+```
+
+#checking class of outcome variable
+```{r}
+
+class(CHIS_spss$asthma)
+table(CHIS_spss$asthma)
+```
+
+#Recoding asthma variable to 0  & 1 for logistic regression
+```{r}
+CHIS <- CHIS_spss %>%
+  mutate(asthma_binary = case_when(asthma %in% c("NO")~ 0,
+                                     asthma %in% c("YES") ~ 1),
+         asthma_binary = factor(asthma_binary, 0:1, c("NO", "YES")))
+           
+CHIS <- CHIS %>% replace_with_na(replace = list(smoking = "INAPPLICABLE"))
+
+
+table(CHIS$asthma_binary, CHIS$asthma)
+```
+#Checking to see see if there are any potential differences in asthma by smoking status
+```{r}
+CHIS %>% 
+  drop_na(c(asthma_binary,smoking)) %>% 
+  ggplot(aes(x = asthma_binary, y = smoking)) +
+      geom_boxplot(aes(fill = asthma_binary)) +
+      labs(x = "asthma Status", y = "smoking status") +
+      theme_bw()
+```
+``
+#Recoding age variable into larger intervals for logistic regression analysis
+```{r}
+CHIS <- CHIS %>%
+  mutate(age_new = case_when(age %in% c("18-25 YEARS", "26-29 YEARS") ~ 0, age %in% c("30-34 YEARS", "35-39 YEARS") ~ 1, age %in% c("40-44 YEARS", "45-49 YEARS") ~ 2, age %in% c("50-54 YEARS", "55-59 YEARS", "60-64 YEARS", "65-69 YEARS", "70-74 YEARS", "75-79 YEARS", "80-84 YEARS", "85+ YEARS") ~ 3))
+
+CHIS$age_new<-factor(CHIS$age_new, levels=c (0,1,2,3), labels = c("18-29", "30-39", "40-49", "50+"))
+
+class(CHIS$age_new)
+```
+
+#Creating a new dataset with all the recoded variables and also ommiting NA values
+```{r}
+CHIS1<- CHIS %>%
+  select("asthma_binary", "smoking", "age_new", "race") %>%
+  na.omit()
+```
+
+#Table 1
+```{r}
+table1 (~ smoking + age_new + race | asthma_binary, data=CHIS1)
+```
+
+# 1st Logistic Model: asthma as the outcome variable and smoking status as the exposure
+```{r}
+smokingLogit <- glm(asthma_binary ~ smoking, data=CHIS1, family="binomial")
+summary(smokingLogit)
+
+#calculate and print ORs and 95% CIs  
+ORsmoking<-exp(cbind(OR = coef(smokingLogit), confint(smokingLogit))) #calculate ORs and 95% CIs
+ORsmoking #print ORs and 95% CIs
+
+odds.n.ends (smokingLogit)
+
+```
+
+#Model Fits
+```{r}
+#influence plot - Cook's D plot-identifies observation number in parent dataset
+plot(smokingLogit, which=4, id.n=5, col="red") 
+
+
+#Various pseudo R squares, log likelihood, deviance, AIC, BIC
+blr_model_fit_stats(smokingLogit)
+
+#Hosmer lemeshow goodness of fit test: 
+blr_test_hosmer_lemeshow(smokingLogit)
+
+#goodness of fit test was non-significant indicating that model was not a bad fit
+```
+``
+#2nd Logistic Model: with asthma as outcome, smoking as exposure, age and race as confounders.
+```{r}
+#income and bmi cat logistic model
+smoking2Logit <- glm(asthma_binary ~ age_new + race + smoking, data=CHIS1, family="binomial")
+summary(smoking2Logit)
+
+#calculate and print ORs and 95% CIs  
+ORmodel<-exp(cbind(OR = coef(smoking2Logit), confint(smoking2Logit))) #calculate ORs and 95% CIs
+ORmodel #print ORs and 95% CIs
+
+odds.n.ends(smoking2Logit)
+```
+
+Based on the data above: those who smoked some days had 2% lower odds of having asthma than those who smoked everyday (OR=0.98; 95% CI 0.73,1.32) while those who didn’t smoke at all had 10% greater odds of having asthma than those who smoked every day (OR=1.1; 95% CI 0.91,1.34). 
+
+#Check for multicolinearity
+```{r}
+#Variance Inflation Factors
+vif(smoking2Logit)
+```
+
+None of the values are greater than 3
+
+#Check for undue influence
+```{r}
+#Cook's D plot
+plot(smoking2Logit, which=4, id.n=5, col="red") 
+
+#Cook's D cutoff=0.004
+cutoff <- 0.004 
+
+#identify observations with a Cook's Distance greater than cutoff
+obs_no <- as.data.frame(cooks.distance(smoking2Logit)) %>%
+  dplyr::mutate(obs_no=row_number()) %>%
+  filter(`cooks.distance(smoking2Logit)` > cutoff)
+
+#Let's exclude the values shown in the Cook's D plot, and see how the models compare.
+
+smoking2Logit_new <- update(smoking2Logit,subset=c(-obs_no$obs_no))
+
+summary(smoking2Logit_new)
+
+#compare coefficients between models with and without influential observations
+compareCoefs(smoking2Logit, smoking2Logit_new) 
+```
+After excluding values, the difference between coefficients are very little. We will continue to use the full model for this analysis
+
+#To compare the smoking only model and with the model with age and race, we will run a LR test
+
+```{r}
+#likelihood ratio test: compare two nested models
+lrtest(smoking2Logit, smokingLogit)
+```
+The absolute values of log likelihood of smoking only model is larger than the model with both smoking, race and age. Based on the significant p value from LR test, we can conclude that the model with smoking, race and age is better than smoking only model.
