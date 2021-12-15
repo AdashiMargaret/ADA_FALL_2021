@@ -2,11 +2,9 @@
 title: "ADA_finalproject"
 output: html_document
 ---
-
+#Install and load all packages
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-```{r}
 install.packages(pacman)
 install.packages("table1")
 pacman::p_load(tidyverse, ROCR, odds.n.ends, blorr, lmtest, car)
@@ -113,7 +111,7 @@ blr_model_fit_stats(smokingLogit)
 #Hosmer lemeshow goodness of fit test: 
 blr_test_hosmer_lemeshow(smokingLogit)
 
-#goodness of fit test was non-significant indicating that model was not a bad fit
+#goodness of fit test was non-significant indicating that model is a good fit
 ```
 ``
 #2nd Logistic Model: with asthma as outcome, smoking as exposure, age and race as confounders.
@@ -139,6 +137,13 @@ vif(smoking2Logit)
 
 None of the values are greater than 3
 
+#check for goodness of fit 
+```{r}
+#Hosmer lemeshow goodness of fit test: 
+blr_test_hosmer_lemeshow(smoking2Logit)
+```
+Goodness of fit test was non-significant indicating that model is a good fit
+
 #Check for undue influence
 ```{r}
 #Cook's D plot
@@ -161,12 +166,12 @@ summary(smoking2Logit_new)
 #compare coefficients between models with and without influential observations
 compareCoefs(smoking2Logit, smoking2Logit_new) 
 ```
-After excluding values, the difference between coefficients are very little. We will continue to use the full model for this analysis
+After excluding values, the difference between coefficients are very little. We will continue to use the full model with all the observations for this analysis
 
-#To compare the smoking only model and with the model with age and race, we will run a LR test
+#To compare the smoking only model with the model with smoking, age and race, we will run a LR test
 
 ```{r}
 #likelihood ratio test: compare two nested models
 lrtest(smoking2Logit, smokingLogit)
 ```
-The absolute values of log likelihood of smoking only model is larger than the model with both smoking, race and age. Based on the significant p value from LR test, we can conclude that the model with smoking, race and age is better than smoking only model.
+The absolute values of log likelihood of the smoking only model is larger than the model with both smoking, race and age. Based on the significant p value from LR test, we can conclude that the model with smoking, race and age is better than smoking only model.
